@@ -7,11 +7,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 const FORUM_BASE_DIR = __DIR__ . '/../';
 const FORUM_USERS_FILE = FORUM_BASE_DIR . 'users.txt';
 const FORUM_DATA_DIR = FORUM_BASE_DIR . 'data';
+const FORUM_THREAD_ID_BYTES = 8;
+const FORUM_POST_ID_BYTES = 12;
 
 function forum_init_storage(): void
 {
     if (!is_dir(FORUM_DATA_DIR)) {
-        mkdir(FORUM_DATA_DIR, 0750, true);
+        mkdir(FORUM_DATA_DIR, 0700, true);
     }
 
     if (!file_exists(FORUM_USERS_FILE)) {
@@ -36,6 +38,11 @@ function forum_read_users(): array
 {
     forum_init_storage();
     $lines = file(FORUM_USERS_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+    return forum_parse_users($lines);
+}
+
+function forum_parse_users(array $lines): array
+{
     $users = [];
     foreach ($lines as $line) {
         $decoded = json_decode($line, true);
@@ -67,27 +74,39 @@ function forum_register_user(string $username, string $password): array
         return [false, 'Password must be at least 6 characters.'];
     }
 
-    if (forum_find_user($username)) {
-        return [false, 'Username already exists.'];
-    }
-
-    $users = forum_read_users();
-    $role = count($users) === 0 ? 'admin' : 'user';
-
-    $record = [
-        'username' => $username,
-        'password' => password_hash($password, PASSWORD_DEFAULT),
-        'role' => $role,
-        'created_at' => gmdate('c'),
-    ];
-
-    $fp = fopen(FORUM_USERS_FILE, 'ab');
+    $fp = fopen(FORUM_USERS_FILE, 'c+');
     if ($fp === false) {
         return [false, 'Unable to write user database.'];
     }
 
-    flock($fp, LOCK_EX);
+    if (!flock($fp, LOCK_EX)) {
+        fclose($fp);
+        return [false, 'Unable to lock user database.'];
+    }
+
+    rewind($fp);
+    $lockedContent = stream_get_contents($fp) ?: '';
+    $users = forum_parse_users(
+        $lockedContent === '' ? [] : preg_split('/\R/', $lockedContent, -1, PREG_SPLIT_NO_EMPTY)
+    );
+    foreach ($users as $existingUser) {
+        if (strcasecmp($existingUser['username'], $username) === 0) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return [false, 'Username already exists.'];
+        }
+    }
+
+    $record = [
+        'username' => $username,
+        'password' => password_hash($password, PASSWORD_DEFAULT),
+        'role' => count($users) === 0 ? 'admin' : 'user',
+        'created_at' => gmdate('c'),
+    ];
+
+    fseek($fp, 0, SEEK_END);
     fwrite($fp, json_encode($record, JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    fflush($fp);
     flock($fp, LOCK_UN);
     fclose($fp);
 
@@ -184,7 +203,7 @@ function forum_create_category(string $name, string $createdBy): array
     if (file_exists($path)) {
         return [false, 'Category already exists.'];
     }
-    if (!mkdir($path, 0750, true) && !is_dir($path)) {
+    if (!mkdir($path, 0700, true) && !is_dir($path)) {
         return [false, 'Unable to create category folder.'];
     }
 
@@ -265,9 +284,9 @@ function forum_create_thread(string $categorySlug, string $title, string $author
     if ($threadSlugBase === '') {
         $threadSlugBase = 'thread';
     }
-    $threadSlug = $threadSlugBase . '-' . bin2hex(random_bytes(8));
+    $threadSlug = $threadSlugBase . '-' . bin2hex(random_bytes(FORUM_THREAD_ID_BYTES));
     $threadPath = forum_category_path($categorySlug) . '/' . $threadSlug;
-    if (!mkdir($threadPath, 0750, true) && !is_dir($threadPath)) {
+    if (!mkdir($threadPath, 0700, true) && !is_dir($threadPath)) {
         return [false, 'Unable to create thread folder.'];
     }
 
@@ -324,9 +343,9 @@ function forum_add_post(string $categorySlug, string $threadSlug, string $author
         'content' => $content,
         'created_at' => gmdate('c'),
     ];
-    $fileName = bin2hex(random_bytes(12)) . '.txt';
+    $fileName = bin2hex(random_bytes(FORUM_POST_ID_BYTES)) . '.txt';
     $path = forum_category_path($categorySlug) . '/' . $threadSlug . '/' . $fileName;
-    $ok = file_put_contents($path, json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $ok = file_put_contents($path, json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
     return $ok === false ? [false, 'Unable to save post.'] : [true, null];
 }
 
