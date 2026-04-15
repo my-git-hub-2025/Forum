@@ -6,4 +6,3 @@ unset($_SESSION['user']);
 forum_set_flash('success', 'Logged out successfully.');
 header('Location: index.php');
 exit;
-

@@ -11,7 +11,7 @@ const FORUM_DATA_DIR = FORUM_BASE_DIR . 'data';
 function forum_init_storage(): void
 {
     if (!is_dir(FORUM_DATA_DIR)) {
-        mkdir(FORUM_DATA_DIR, 0755, true);
+        mkdir(FORUM_DATA_DIR, 0750, true);
     }
 
     if (!file_exists(FORUM_USERS_FILE)) {
@@ -184,7 +184,7 @@ function forum_create_category(string $name, string $createdBy): array
     if (file_exists($path)) {
         return [false, 'Category already exists.'];
     }
-    if (!mkdir($path, 0755, true) && !is_dir($path)) {
+    if (!mkdir($path, 0750, true) && !is_dir($path)) {
         return [false, 'Unable to create category folder.'];
     }
 
@@ -267,7 +267,7 @@ function forum_create_thread(string $categorySlug, string $title, string $author
     }
     $threadSlug = $threadSlugBase . '-' . bin2hex(random_bytes(8));
     $threadPath = forum_category_path($categorySlug) . '/' . $threadSlug;
-    if (!mkdir($threadPath, 0755, true) && !is_dir($threadPath)) {
+    if (!mkdir($threadPath, 0750, true) && !is_dir($threadPath)) {
         return [false, 'Unable to create thread folder.'];
     }
 

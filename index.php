@@ -180,4 +180,3 @@ $flash = forum_get_flash();
 </script>
 </body>
 </html>
-
