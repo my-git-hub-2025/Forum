@@ -60,7 +60,7 @@ $flash = forum_get_flash();
         <a class="navbar-brand" href="index.php">Forum</a>
         <div class="ms-auto d-flex align-items-center gap-2">
             <?php if ($user): ?>
-                <span class="text-white small">
+                <span class="text-white small" aria-label="Current user: <?= forum_h($user['username']) ?>">
                     Logged in as <strong><?= forum_h($user['username']) ?></strong>
                     (<?= forum_h($user['role'] ?? 'user') ?>)
                 </span>
