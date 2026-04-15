@@ -11,7 +11,7 @@ const FORUM_DATA_DIR = FORUM_BASE_DIR . 'data';
 function forum_init_storage(): void
 {
     if (!is_dir(FORUM_DATA_DIR)) {
-        mkdir(FORUM_DATA_DIR, 0777, true);
+        mkdir(FORUM_DATA_DIR, 0755, true);
     }
 
     if (!file_exists(FORUM_USERS_FILE)) {
@@ -184,7 +184,7 @@ function forum_create_category(string $name, string $createdBy): array
     if (file_exists($path)) {
         return [false, 'Category already exists.'];
     }
-    if (!mkdir($path, 0777, true) && !is_dir($path)) {
+    if (!mkdir($path, 0755, true) && !is_dir($path)) {
         return [false, 'Unable to create category folder.'];
     }
 
@@ -265,9 +265,9 @@ function forum_create_thread(string $categorySlug, string $title, string $author
     if ($threadSlugBase === '') {
         $threadSlugBase = 'thread';
     }
-    $threadSlug = $threadSlugBase . '-' . time() . '-' . bin2hex(random_bytes(2));
+    $threadSlug = $threadSlugBase . '-' . bin2hex(random_bytes(8));
     $threadPath = forum_category_path($categorySlug) . '/' . $threadSlug;
-    if (!mkdir($threadPath, 0777, true) && !is_dir($threadPath)) {
+    if (!mkdir($threadPath, 0755, true) && !is_dir($threadPath)) {
         return [false, 'Unable to create thread folder.'];
     }
 
@@ -324,7 +324,7 @@ function forum_add_post(string $categorySlug, string $threadSlug, string $author
         'content' => $content,
         'created_at' => gmdate('c'),
     ];
-    $fileName = gmdate('YmdHis') . '-' . bin2hex(random_bytes(3)) . '.txt';
+    $fileName = bin2hex(random_bytes(12)) . '.txt';
     $path = forum_category_path($categorySlug) . '/' . $threadSlug . '/' . $fileName;
     $ok = file_put_contents($path, json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     return $ok === false ? [false, 'Unable to save post.'] : [true, null];
@@ -334,4 +334,3 @@ function forum_h(?string $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
-

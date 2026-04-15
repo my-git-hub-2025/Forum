@@ -10,7 +10,7 @@ Simple PHP forum with:
 
 ## Run
 
-From `/home/runner/work/Forum/Forum`:
+From the project root:
 
 ```bash
 php -S localhost:8000
@@ -20,8 +20,8 @@ Open `http://localhost:8000`.
 
 ## Storage
 
-- Users: `/home/runner/work/Forum/Forum/users.txt`
-- Forum data: `/home/runner/work/Forum/Forum/data/`
+- Users: `users.txt`
+- Forum data: `data/`
   - category folder
     - `category.json`
     - thread folder
