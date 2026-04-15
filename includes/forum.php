@@ -7,13 +7,14 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 const FORUM_BASE_DIR = __DIR__ . '/../';
 const FORUM_USERS_FILE = FORUM_BASE_DIR . 'users.txt';
 const FORUM_DATA_DIR = FORUM_BASE_DIR . 'data';
+const FORUM_DIR_MODE = 0750;
 const FORUM_THREAD_ID_BYTES = 8;
 const FORUM_POST_ID_BYTES = 12;
 
 function forum_init_storage(): void
 {
     if (!is_dir(FORUM_DATA_DIR)) {
-        mkdir(FORUM_DATA_DIR, 0700, true);
+        mkdir(FORUM_DATA_DIR, FORUM_DIR_MODE, true);
     }
 
     if (!file_exists(FORUM_USERS_FILE)) {
@@ -203,7 +204,7 @@ function forum_create_category(string $name, string $createdBy): array
     if (file_exists($path)) {
         return [false, 'Category already exists.'];
     }
-    if (!mkdir($path, 0700, true) && !is_dir($path)) {
+    if (!mkdir($path, FORUM_DIR_MODE, true) && !is_dir($path)) {
         return [false, 'Unable to create category folder.'];
     }
 
@@ -286,7 +287,7 @@ function forum_create_thread(string $categorySlug, string $title, string $author
     }
     $threadSlug = $threadSlugBase . '-' . bin2hex(random_bytes(FORUM_THREAD_ID_BYTES));
     $threadPath = forum_category_path($categorySlug) . '/' . $threadSlug;
-    if (!mkdir($threadPath, 0700, true) && !is_dir($threadPath)) {
+    if (!mkdir($threadPath, FORUM_DIR_MODE, true) && !is_dir($threadPath)) {
         return [false, 'Unable to create thread folder.'];
     }
 
@@ -345,8 +346,12 @@ function forum_add_post(string $categorySlug, string $threadSlug, string $author
     ];
     $fileName = bin2hex(random_bytes(FORUM_POST_ID_BYTES)) . '.txt';
     $path = forum_category_path($categorySlug) . '/' . $threadSlug . '/' . $fileName;
-    $ok = file_put_contents($path, json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
-    return $ok === false ? [false, 'Unable to save post.'] : [true, null];
+    $encoded = json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        return [false, 'Unable to encode post payload.'];
+    }
+    $ok = file_put_contents($path, $encoded, LOCK_EX);
+    return ($ok === false || $ok < 1) ? [false, 'Unable to save post.'] : [true, null];
 }
 
 function forum_h(?string $value): string
