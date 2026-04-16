@@ -64,6 +64,9 @@ $flash = forum_get_flash();
                     Logged in as <strong><?= forum_h($user['username']) ?></strong>
                     (<?= forum_h($user['role'] ?? 'user') ?>)
                 </span>
+                <?php if (($user['role'] ?? '') === 'admin'): ?>
+                    <a class="btn btn-outline-info btn-sm" href="admin_users.php">Manage Users</a>
+                <?php endif; ?>
                 <a class="btn btn-outline-light btn-sm" href="logout.php">Logout</a>
             <?php else: ?>
                 <a class="btn btn-outline-light btn-sm" href="login.php">Login</a>

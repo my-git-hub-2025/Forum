@@ -50,6 +50,9 @@ $flash = forum_get_flash();
         <div class="ms-auto d-flex gap-2">
             <?php if ($user): ?>
                 <span class="text-white small align-self-center"><?= forum_h($user['username']) ?></span>
+                <?php if (($user['role'] ?? '') === 'admin'): ?>
+                    <a class="btn btn-outline-info btn-sm" href="admin_users.php">Manage Users</a>
+                <?php endif; ?>
                 <a class="btn btn-outline-light btn-sm" href="logout.php">Logout</a>
             <?php else: ?>
                 <a class="btn btn-outline-light btn-sm" href="login.php">Login</a>
