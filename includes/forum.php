@@ -161,7 +161,7 @@ function forum_validate_role(string $role): bool
     return in_array($role, ['admin', 'user'], true);
 }
 
-function forum_load_locked_users($fp): array
+function forum_load_users_from_locked_file($fp): array
 {
     rewind($fp);
     $lockedContent = stream_get_contents($fp) ?: '';
@@ -170,7 +170,7 @@ function forum_load_locked_users($fp): array
     );
 }
 
-function forum_save_locked_users($fp, array $users): bool
+function forum_save_users_to_locked_file($fp, array $users): bool
 {
     rewind($fp);
     if (!ftruncate($fp, 0)) {
@@ -219,7 +219,7 @@ function forum_admin_update_user(string $targetUsername, string $newUsername, st
         return [false, 'Unable to lock user database.'];
     }
 
-    $users = forum_load_locked_users($fp);
+    $users = forum_load_users_from_locked_file($fp);
     $targetIndex = null;
     foreach ($users as $index => $existingUser) {
         if (strcasecmp((string) $existingUser['username'], $targetUsername) === 0) {
@@ -270,7 +270,7 @@ function forum_admin_update_user(string $targetUsername, string $newUsername, st
         $users[$targetIndex]['status'] = forum_user_is_suspended($users[$targetIndex]) ? 'suspended' : 'active';
     }
 
-    if (!forum_save_locked_users($fp, $users)) {
+    if (!forum_save_users_to_locked_file($fp, $users)) {
         flock($fp, LOCK_UN);
         fclose($fp);
         return [false, 'Unable to save user changes.'];
@@ -293,7 +293,7 @@ function forum_admin_set_user_suspension(string $targetUsername, bool $suspend):
         return [false, 'Unable to lock user database.'];
     }
 
-    $users = forum_load_locked_users($fp);
+    $users = forum_load_users_from_locked_file($fp);
     $targetIndex = null;
     foreach ($users as $index => $existingUser) {
         if (strcasecmp((string) $existingUser['username'], $targetUsername) === 0) {
@@ -333,7 +333,7 @@ function forum_admin_set_user_suspension(string $targetUsername, bool $suspend):
     $users[$targetIndex]['status'] = $suspend ? 'suspended' : 'active';
     $users[$targetIndex]['suspended_at'] = $suspend ? gmdate('c') : null;
 
-    if (!forum_save_locked_users($fp, $users)) {
+    if (!forum_save_users_to_locked_file($fp, $users)) {
         flock($fp, LOCK_UN);
         fclose($fp);
         return [false, 'Unable to save user changes.'];
