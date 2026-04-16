@@ -49,7 +49,9 @@ function forum_parse_users(array $lines): array
         $decoded = json_decode($line, true);
         if (is_array($decoded) && isset($decoded['username'], $decoded['password'], $decoded['role'])) {
             if (!isset($decoded['status'])) {
-                $decoded['status'] = forum_user_is_suspended($decoded) ? 'suspended' : 'active';
+                $decoded['status'] = (($decoded['suspended'] ?? false) === true || isset($decoded['suspended_at']))
+                    ? 'suspended'
+                    : 'active';
             }
             $users[] = $decoded;
         }
@@ -179,7 +181,9 @@ function forum_save_users_to_locked_file($fp, array $users): bool
 
     foreach ($users as $user) {
         if (!isset($user['status'])) {
-            $user['status'] = forum_user_is_suspended($user) ? 'suspended' : 'active';
+            $user['status'] = (($user['suspended'] ?? false) === true || isset($user['suspended_at']))
+                ? 'suspended'
+                : 'active';
         }
         $written = fwrite($fp, json_encode($user, JSON_UNESCAPED_SLASHES) . PHP_EOL);
         if ($written === false) {
