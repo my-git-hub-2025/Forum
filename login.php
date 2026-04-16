@@ -12,6 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = (string) ($_POST['password'] ?? '');
     $user = forum_authenticate($username, $password);
     if ($user) {
+        if (forum_user_is_suspended($user)) {
+            forum_set_flash('danger', 'Your account is suspended.');
+            header('Location: login.php');
+            exit;
+        }
         $_SESSION['user'] = $user;
         forum_set_flash('success', 'Welcome back, ' . $user['username'] . '!');
         header('Location: index.php');

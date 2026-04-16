@@ -48,6 +48,11 @@ function forum_parse_users(array $lines): array
     foreach ($lines as $line) {
         $decoded = json_decode($line, true);
         if (is_array($decoded) && isset($decoded['username'], $decoded['password'], $decoded['role'])) {
+            if (!isset($decoded['status'])) {
+                $decoded['status'] = (($decoded['suspended'] ?? false) === true || isset($decoded['suspended_at']))
+                    ? 'suspended'
+                    : 'active';
+            }
             $users[] = $decoded;
         }
     }
@@ -102,6 +107,7 @@ function forum_register_user(string $username, string $password): array
         'username' => $username,
         'password' => password_hash($password, PASSWORD_DEFAULT),
         'role' => count($users) === 0 ? 'admin' : 'user',
+        'status' => 'active',
         'created_at' => gmdate('c'),
     ];
 
@@ -126,7 +132,221 @@ function forum_authenticate(string $username, string $password): ?array
 
 function forum_current_user(): ?array
 {
-    return $_SESSION['user'] ?? null;
+    $sessionUser = $_SESSION['user'] ?? null;
+    if (!is_array($sessionUser) || !isset($sessionUser['username'])) {
+        return null;
+    }
+
+    $freshUser = forum_find_user((string) $sessionUser['username']);
+    if (!$freshUser || forum_user_is_suspended($freshUser)) {
+        unset($_SESSION['user']);
+        return null;
+    }
+
+    $_SESSION['user'] = $freshUser;
+    return $freshUser;
+}
+
+function forum_user_is_suspended(array $user): bool
+{
+    if (($user['status'] ?? null) === 'suspended') {
+        return true;
+    }
+    if (($user['suspended'] ?? null) === true) {
+        return true;
+    }
+    return isset($user['suspended_at']) && (string) $user['suspended_at'] !== '';
+}
+
+function forum_validate_role(string $role): bool
+{
+    return in_array($role, ['admin', 'user'], true);
+}
+
+function forum_load_users_from_locked_file($fp): array
+{
+    rewind($fp);
+    $lockedContent = stream_get_contents($fp) ?: '';
+    return forum_parse_users(
+        $lockedContent === '' ? [] : preg_split('/\R/', $lockedContent, -1, PREG_SPLIT_NO_EMPTY)
+    );
+}
+
+function forum_save_users_to_locked_file($fp, array $users): bool
+{
+    rewind($fp);
+    if (!ftruncate($fp, 0)) {
+        return false;
+    }
+
+    foreach ($users as $user) {
+        if (!isset($user['status'])) {
+            $user['status'] = (($user['suspended'] ?? false) === true || isset($user['suspended_at']))
+                ? 'suspended'
+                : 'active';
+        }
+        $written = fwrite($fp, json_encode($user, JSON_UNESCAPED_SLASHES) . PHP_EOL);
+        if ($written === false) {
+            return false;
+        }
+    }
+
+    return fflush($fp);
+}
+
+function forum_admin_list_users(): array
+{
+    $users = forum_read_users();
+    usort($users, static fn(array $a, array $b): int => strcmp($a['username'], $b['username']));
+    return $users;
+}
+
+function forum_admin_update_user(string $targetUsername, string $newUsername, string $newRole): array
+{
+    $targetUsername = trim($targetUsername);
+    $newUsername = trim($newUsername);
+    $newRole = trim($newRole);
+
+    if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $newUsername)) {
+        return [false, 'Username must be 3-20 characters and contain only letters, numbers, or underscore.'];
+    }
+    if (!forum_validate_role($newRole)) {
+        return [false, 'Invalid role.'];
+    }
+
+    $fp = fopen(FORUM_USERS_FILE, 'c+');
+    if ($fp === false) {
+        return [false, 'Unable to write user database.'];
+    }
+    if (!flock($fp, LOCK_EX)) {
+        fclose($fp);
+        return [false, 'Unable to lock user database.'];
+    }
+
+    $users = forum_load_users_from_locked_file($fp);
+    $targetIndex = null;
+    foreach ($users as $index => $existingUser) {
+        if (strcasecmp((string) $existingUser['username'], $targetUsername) === 0) {
+            $targetIndex = $index;
+            break;
+        }
+    }
+
+    if ($targetIndex === null) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return [false, 'User not found.'];
+    }
+
+    foreach ($users as $index => $existingUser) {
+        if ($index === $targetIndex) {
+            continue;
+        }
+        if (strcasecmp((string) $existingUser['username'], $newUsername) === 0) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return [false, 'Username already exists.'];
+        }
+    }
+
+    $targetUser = $users[$targetIndex];
+    $wasAdmin = ((string) ($targetUser['role'] ?? 'user')) === 'admin';
+    if ($wasAdmin && $newRole !== 'admin') {
+        $otherActiveAdmins = 0;
+        foreach ($users as $index => $existingUser) {
+            if ($index === $targetIndex) {
+                continue;
+            }
+            if (((string) ($existingUser['role'] ?? 'user')) === 'admin' && !forum_user_is_suspended($existingUser)) {
+                $otherActiveAdmins++;
+            }
+        }
+        if ($otherActiveAdmins === 0) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return [false, 'At least one active admin is required.'];
+        }
+    }
+
+    $users[$targetIndex]['username'] = $newUsername;
+    $users[$targetIndex]['role'] = $newRole;
+    if (!isset($users[$targetIndex]['status'])) {
+        $users[$targetIndex]['status'] = forum_user_is_suspended($users[$targetIndex]) ? 'suspended' : 'active';
+    }
+
+    if (!forum_save_users_to_locked_file($fp, $users)) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return [false, 'Unable to save user changes.'];
+    }
+
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return [true, $users[$targetIndex]];
+}
+
+function forum_admin_set_user_suspension(string $targetUsername, bool $suspend): array
+{
+    $targetUsername = trim($targetUsername);
+    $fp = fopen(FORUM_USERS_FILE, 'c+');
+    if ($fp === false) {
+        return [false, 'Unable to write user database.'];
+    }
+    if (!flock($fp, LOCK_EX)) {
+        fclose($fp);
+        return [false, 'Unable to lock user database.'];
+    }
+
+    $users = forum_load_users_from_locked_file($fp);
+    $targetIndex = null;
+    foreach ($users as $index => $existingUser) {
+        if (strcasecmp((string) $existingUser['username'], $targetUsername) === 0) {
+            $targetIndex = $index;
+            break;
+        }
+    }
+
+    if ($targetIndex === null) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return [false, 'User not found.'];
+    }
+
+    $targetUser = $users[$targetIndex];
+    if (
+        $suspend
+        && ((string) ($targetUser['role'] ?? 'user')) === 'admin'
+        && !forum_user_is_suspended($targetUser)
+    ) {
+        $otherActiveAdmins = 0;
+        foreach ($users as $index => $existingUser) {
+            if ($index === $targetIndex) {
+                continue;
+            }
+            if (((string) ($existingUser['role'] ?? 'user')) === 'admin' && !forum_user_is_suspended($existingUser)) {
+                $otherActiveAdmins++;
+            }
+        }
+        if ($otherActiveAdmins === 0) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return [false, 'At least one active admin is required.'];
+        }
+    }
+
+    $users[$targetIndex]['status'] = $suspend ? 'suspended' : 'active';
+    $users[$targetIndex]['suspended'] = $suspend;
+    $users[$targetIndex]['suspended_at'] = $suspend ? gmdate('c') : null;
+
+    if (!forum_save_users_to_locked_file($fp, $users)) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return [false, 'Unable to save user changes.'];
+    }
+
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return [true, $users[$targetIndex]];
 }
 
 function forum_set_flash(string $type, string $message): void
