@@ -53,11 +53,12 @@ $flash = forum_get_flash();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Forum</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/forum.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<body class="app-page">
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar mb-4">
     <div class="container">
-        <a class="navbar-brand" href="index.php">Forum</a>
+        <a class="navbar-brand app-title" href="index.php">Forum</a>
         <div class="ms-auto d-flex align-items-center gap-2">
             <?php if ($user): ?>
                 <span class="text-white small" aria-label="Current user: <?= forum_h($user['username']) ?>">
@@ -76,10 +77,15 @@ $flash = forum_get_flash();
     </div>
 </nav>
 
-<div class="container pb-5">
+<div class="container app-shell pb-5">
     <?php if ($flash): ?>
         <div class="alert alert-<?= forum_h($flash['type']) ?>"><?= forum_h($flash['message']) ?></div>
     <?php endif; ?>
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Community Forum</h1>
+        <p class="forum-meta mb-0">Discover categories, join discussions, and share your ideas.</p>
+    </div>
 
     <div class="row g-4">
         <div class="col-lg-4">

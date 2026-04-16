@@ -1,0 +1,119 @@
+:root {
+    --forum-bg: #f3f6ff;
+    --forum-surface: #ffffff;
+    --forum-text: #0f172a;
+    --forum-muted: #64748b;
+    --forum-primary: #4f46e5;
+    --forum-primary-strong: #4338ca;
+    --forum-border: #e2e8f0;
+}
+
+body.app-page {
+    background: radial-gradient(circle at top, #e9edff, var(--forum-bg) 45%);
+    color: var(--forum-text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.app-shell {
+    max-width: 1100px;
+}
+
+.app-navbar {
+    background: rgba(15, 23, 42, 0.94) !important;
+    backdrop-filter: blur(6px);
+}
+
+.app-navbar .container {
+    row-gap: 0.6rem;
+}
+
+.app-navbar .ms-auto {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.app-navbar .btn {
+    border-radius: 999px;
+}
+
+.app-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.card {
+    border: 1px solid var(--forum-border);
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.07);
+}
+
+.card-header {
+    background-color: #f8faff;
+    border-bottom-color: var(--forum-border);
+    font-weight: 600;
+}
+
+.list-group-item {
+    border-color: var(--forum-border);
+}
+
+.list-group-item.active {
+    background: var(--forum-primary);
+    border-color: var(--forum-primary);
+}
+
+.btn-primary,
+.btn-success {
+    border-radius: 0.8rem;
+}
+
+.btn-primary {
+    background: var(--forum-primary);
+    border-color: var(--forum-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--forum-primary-strong);
+    border-color: var(--forum-primary-strong);
+}
+
+.form-control,
+.form-select {
+    border-radius: 0.8rem;
+    border-color: #dbe4f0;
+    padding: 0.65rem 0.85rem;
+}
+
+.forum-meta {
+    color: var(--forum-muted);
+}
+
+.auth-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
+.auth-card {
+    border-radius: 1.15rem;
+}
+
+@media (max-width: 575.98px) {
+    .app-navbar .btn,
+    .app-navbar .text-white.small {
+        width: 100%;
+        text-align: center;
+    }
+
+    .app-navbar .btn {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .table-responsive {
+        border: 1px solid var(--forum-border);
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+}
