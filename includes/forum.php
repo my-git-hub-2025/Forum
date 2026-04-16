@@ -331,6 +331,7 @@ function forum_admin_set_user_suspension(string $targetUsername, bool $suspend):
     }
 
     $users[$targetIndex]['status'] = $suspend ? 'suspended' : 'active';
+    $users[$targetIndex]['suspended'] = $suspend;
     $users[$targetIndex]['suspended_at'] = $suspend ? gmdate('c') : null;
 
     if (!forum_save_users_to_locked_file($fp, $users)) {
