@@ -35,14 +35,16 @@ $flash = forum_get_flash();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Register - Forum</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/forum.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<div class="container py-5">
+<body class="app-page">
+<div class="container auth-wrap py-4">
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card">
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+            <div class="card auth-card">
                 <div class="card-body">
                     <h4 class="mb-3">Register</h4>
+                    <p class="forum-meta small">Create your account and start sharing your voice.</p>
                     <?php if ($flash): ?>
                         <div class="alert alert-<?= forum_h($flash['type']) ?>"><?= forum_h($flash['message']) ?></div>
                     <?php endif; ?>

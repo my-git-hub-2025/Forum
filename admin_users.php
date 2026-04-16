@@ -52,11 +52,12 @@ $flash = forum_get_flash();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Manage Users - Forum</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/forum.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<body class="app-page">
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar mb-4">
     <div class="container">
-        <a class="navbar-brand" href="index.php">Forum</a>
+        <a class="navbar-brand app-title" href="index.php">Forum</a>
         <div class="ms-auto d-flex gap-2">
             <span class="text-white small align-self-center">
                 <?= forum_h($user['username']) ?> (admin)
@@ -67,7 +68,7 @@ $flash = forum_get_flash();
     </div>
 </nav>
 
-<div class="container pb-5">
+<div class="container app-shell pb-5">
     <h3 class="mb-3">Manage Users</h3>
 
     <?php if ($flash): ?>
