@@ -4,7 +4,7 @@ Simple PHP forum with:
 
 - User registration and login
 - First registered user automatically becomes `admin`
-- Admin user management: view, edit role/username, suspend/reactivate users
+- Admin user management: create, view, edit role/username, suspend/reactivate, delete users
 - `users.txt` as user database
 - Category/thread/post storage in folders and `.txt` files
 - Bootstrap + jQuery UI
