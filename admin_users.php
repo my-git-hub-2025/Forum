@@ -10,6 +10,16 @@ if (!$user || ($user['role'] ?? '') !== 'admin') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['create_user'])) {
+        $username = (string) ($_POST['username'] ?? '');
+        $password = (string) ($_POST['password'] ?? '');
+        $role = (string) ($_POST['role'] ?? 'user');
+        [$ok, $result] = forum_admin_create_user($username, $password, $role);
+        forum_set_flash($ok ? 'success' : 'danger', $ok ? 'User created.' : $result);
+        header('Location: admin_users.php');
+        exit;
+    }
+
     if (isset($_POST['edit_user'])) {
         $targetUsername = (string) ($_POST['target_username'] ?? '');
         $newUsername = (string) ($_POST['username'] ?? '');
@@ -37,6 +47,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             forum_set_flash($ok ? 'success' : 'danger', $ok ? ($suspend ? 'User suspended.' : 'User reactivated.') : $result);
         }
 
+        header('Location: admin_users.php');
+        exit;
+    }
+
+    if (isset($_POST['delete_user'])) {
+        $targetUsername = (string) ($_POST['target_username'] ?? '');
+        if (strcasecmp($targetUsername, $user['username']) === 0) {
+            forum_set_flash('danger', 'You cannot delete your own account.');
+        } else {
+            [$ok, $result] = forum_admin_delete_user($targetUsername);
+            forum_set_flash($ok ? 'success' : 'danger', $ok ? 'User deleted.' : $result);
+        }
         header('Location: admin_users.php');
         exit;
     }
@@ -74,6 +96,29 @@ $flash = forum_get_flash();
     <?php if ($flash): ?>
         <div class="alert alert-<?= forum_h($flash['type']) ?>"><?= forum_h($flash['message']) ?></div>
     <?php endif; ?>
+
+    <div class="card mb-4">
+        <div class="card-header">Create User</div>
+        <div class="card-body">
+            <form method="post" class="row g-2">
+                <div class="col-md-4">
+                    <input name="username" class="form-control" placeholder="Username" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="password" name="password" class="form-control" placeholder="Password" minlength="6" required>
+                </div>
+                <div class="col-md-2">
+                    <select name="role" class="form-select">
+                        <option value="user" selected>user</option>
+                        <option value="admin">admin</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100" type="submit" name="create_user" value="1">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="table-responsive">
         <table class="table table-striped table-bordered align-middle bg-white">
@@ -139,6 +184,18 @@ $flash = forum_get_flash();
                                         value="1"
                                     >
                                         <?= $isSuspended ? 'Unsuspend' : 'Suspend' ?>
+                                    </button>
+                                </form>
+                                <form method="post" class="mt-2">
+                                    <input type="hidden" name="target_username" value="<?= forum_h($listedUser['username']) ?>">
+                                    <button
+                                        class="btn btn-danger btn-sm"
+                                        type="submit"
+                                        name="delete_user"
+                                        value="1"
+                                        onclick="return confirm('Delete this user? This cannot be undone.');"
+                                    >
+                                        Delete
                                     </button>
                                 </form>
                             <?php endif; ?>
