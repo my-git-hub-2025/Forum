@@ -288,7 +288,6 @@ function forum_admin_update_user(string $targetUsername, string $newUsername, st
 function forum_admin_create_user(string $username, string $password, string $role): array
 {
     $username = trim($username);
-    $password = (string) $password;
     $role = trim($role);
 
     if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $username)) {
